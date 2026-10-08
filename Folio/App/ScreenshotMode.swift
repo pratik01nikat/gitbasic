@@ -45,6 +45,15 @@ enum ScreenshotSeeder {
         case .library, .reader, .pins, .calibration: session.layout = .book
         }
         session.toast = nil
+        if scene == .calibration {
+            // Show PencilKit's width defaults in the screenshot.
+            let inks: [(String, PKInkingTool.InkType)] = [("pen", .pen), ("monoline", .monoline), ("fountain", .fountainPen),
+                                                          ("pencil", .pencil), ("marker", .marker)]
+            let summary = inks.map { name, ink in
+                String(format: "%@ %.2f [%.2f–%.2f]", name, ink.defaultWidth, ink.validWidthRange.lowerBound, ink.validWidthRange.upperBound)
+            }.joined(separator: "\n")
+            session.toast = Toast(message: summary, symbol: "ruler")
+        }
         return session
     }
 
@@ -56,14 +65,16 @@ enum ScreenshotSeeder {
 
         // A margin note on page 5, pinned as note 1.
         let notePage = min(4, last)
-        let note = handwriting(origin: CGPoint(x: 74, y: 600), lines: 3, width: 300, color: InkColor.navy.uiColor, seed: 3)
+        let note = handwriting(origin: CGPoint(x: 74, y: 600), lines: 3, width: 300, color: InkColor.navy.uiColor, seed: 3,
+                               xHeight: 8, penWidth: 3)
         addInk(note, toPage: notePage, in: session)
         let first = session.addPin(on: .page(notePage), rect: bounds(of: note))
         session.setPinColor(first.id, .red)
 
         // A short note on page 2, pinned and renamed.
         let secondPage = min(1, last)
-        let note2 = handwriting(origin: CGPoint(x: 320, y: 610), lines: 2, width: 220, color: InkColor.red.uiColor, seed: 11)
+        let note2 = handwriting(origin: CGPoint(x: 320, y: 610), lines: 2, width: 220, color: InkColor.red.uiColor, seed: 11,
+                                xHeight: 8, penWidth: 3)
         addInk(note2, toPage: secondPage, in: session)
         let second = session.addPin(on: .page(secondPage), rect: bounds(of: note2))
         session.setPinColor(second.id, .blue)

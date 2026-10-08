@@ -45,6 +45,8 @@ shoot() {
   xcrun simctl launch "$UDID" "$BUNDLE_ID" -FolioScreenshot "$scene" -FolioOrientation "$orientation" >/dev/null
   sleep 12
   xcrun simctl io "$UDID" screenshot "$OUT/$name.png" >/dev/null
+  # simctl captures the portrait framebuffer; turn landscape shots upright.
+  if [ "$orientation" = landscape ]; then sips -r 90 "$OUT/$name.png" >/dev/null; fi
   echo "Captured $name ($(sips -g pixelWidth -g pixelHeight "$OUT/$name.png" | awk '/pixel/ {print $2}' | paste -sd x -))"
 }
 

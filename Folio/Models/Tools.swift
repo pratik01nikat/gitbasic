@@ -81,26 +81,31 @@ enum StrokeSize: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Pen widths are relative to PencilKit's own default for each ink, so
+    /// "Medium" always matches the system tool picker's default thickness.
     func penWidth(_ style: PenStyle) -> CGFloat {
-        let base: CGFloat
+        let factor: CGFloat
         switch self {
-        case .fine: base = 1.4
-        case .medium: base = 2.4
-        case .bold: base = 4.2
+        case .fine: factor = 0.6
+        case .medium: factor = 1
+        case .bold: factor = 1.8
         }
-        switch style {
-        case .pen, .monoline: return base
-        case .fountain: return base * 1.6
-        case .pencil: return base * 1.8
-        }
+        return Self.width(for: style.inkType, factor: factor)
     }
 
     var markerWidth: CGFloat {
+        let factor: CGFloat
         switch self {
-        case .fine: return 10
-        case .medium: return 18
-        case .bold: return 28
+        case .fine: factor = 0.7
+        case .medium: factor = 1
+        case .bold: factor = 1.6
         }
+        return Self.width(for: .marker, factor: factor)
+    }
+
+    private static func width(for ink: PKInkingTool.InkType, factor: CGFloat) -> CGFloat {
+        let range = ink.validWidthRange
+        return min(max(ink.defaultWidth * factor, range.lowerBound), range.upperBound)
     }
 }
 
