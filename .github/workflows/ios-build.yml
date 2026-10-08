@@ -27,3 +27,34 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -quiet \
             build
+
+  screenshots:
+    name: iPad simulator screenshots
+    needs: build
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build for simulator
+        run: |
+          xcodebuild \
+            -project Folio.xcodeproj \
+            -target Folio \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            SYMROOT="$PWD/build" \
+            -quiet \
+            build
+
+      - name: Capture screenshots
+        run: .github/scripts/screenshots.sh build/Debug-iphonesimulator/Folio.app screenshots
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipad-screenshots
+          path: screenshots/
+          if-no-files-found: warn

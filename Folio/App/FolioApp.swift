@@ -28,6 +28,13 @@ struct RootView: View {
                 }
             }
             .onOpenURL { importAndOpen($0) }
+            #if DEBUG
+            .task {
+                if session == nil, let screenshotSession = ScreenshotSeeder.prepare(library: library) {
+                    session = screenshotSession
+                }
+            }
+            #endif
             .onChange(of: scenePhase) { _, phase in
                 if phase != .active { session?.saveNow() }
             }

@@ -40,6 +40,11 @@ struct BookWorkspaceView: View {
         .sheet(item: $exportedFile) { file in
             ShareSheet(items: [file.url])
         }
+        #if DEBUG
+        .onAppear {
+            if let scene = ScreenshotScene.current { columnVisibility = scene.sidebarVisibility }
+        }
+        #endif
         .onChange(of: session.layout) { _, layout in
             if layout == .board && session.tool.kind == .textHighlight { session.select(.pen) }
         }
