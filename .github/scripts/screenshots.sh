@@ -27,6 +27,17 @@ xcrun simctl bootstatus "$UDID" -b
 xcrun simctl ui "$UDID" appearance light || true
 xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --wifiBars 3 || true
 xcrun simctl install "$UDID" "$APP_PATH"
+# The Simulator app must be open for the rotate shortcut to reach the device.
+open -a Simulator --args -CurrentDeviceUDID "$UDID"
+sleep 8
+
+rotate() {
+  # Simulator: Device > Rotate Left / Right (Cmd + arrow).
+  local key="$1"
+  osascript -e 'tell application "Simulator" to activate' \
+            -e "tell application \"System Events\" to key code $key using command down" || echo "rotate failed"
+  sleep 3
+}
 
 shoot() {
   local name="$1" scene="$2" orientation="$3"
@@ -42,6 +53,9 @@ shoot 2-reader-pin-tool reader portrait
 shoot 3-pins-sidebar pins portrait
 shoot 4-book-and-whiteboard split portrait
 shoot 5-whiteboard board portrait
+shoot 9-ink-calibration calibration portrait
+
+rotate 124  # right arrow: landscape
 shoot 6-reader-landscape reader landscape
 shoot 7-pins-sidebar-landscape pins landscape
 shoot 8-book-and-whiteboard-landscape split landscape
