@@ -42,7 +42,7 @@ rotate() {
 shoot() {
   local name="$1" scene="$2" orientation="$3"
   xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
-  xcrun simctl launch "$UDID" "$BUNDLE_ID" -FolioScreenshot "$scene" -FolioOrientation "$orientation" >/dev/null
+  xcrun simctl launch "$UDID" "$BUNDLE_ID" -FolioScreenshot "$scene" >/dev/null
   sleep 12
   xcrun simctl io "$UDID" screenshot "$OUT/$name.png" >/dev/null
   # simctl captures the portrait framebuffer; turn landscape shots upright.
@@ -55,7 +55,6 @@ shoot 2-reader-pin-tool reader portrait
 shoot 3-pins-sidebar pins portrait
 shoot 4-book-and-whiteboard split portrait
 shoot 5-whiteboard board portrait
-shoot 9-ink-calibration calibration portrait
 
 rotate 124  # right arrow: landscape
 shoot 6-reader-landscape reader landscape

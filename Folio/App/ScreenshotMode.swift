@@ -6,16 +6,11 @@ import SwiftUI
 /// Debug builds only. Launching with `-FolioScreenshot <scene>` opens the
 /// welcome book straight into a scene, with sample handwriting, pins, a
 /// highlight and a whiteboard, so CI can capture real simulator screenshots.
-/// `-FolioOrientation landscape` asks for landscape.
 enum ScreenshotScene: String {
-    case library, reader, pins, split, board, calibration
+    case library, reader, pins, split, board
 
     static var current: ScreenshotScene? {
         UserDefaults.standard.string(forKey: "FolioScreenshot").flatMap(ScreenshotScene.init(rawValue:))
-    }
-
-    static var wantsLandscape: Bool {
-        UserDefaults.standard.string(forKey: "FolioOrientation") == "landscape"
     }
 
     var sidebarVisibility: NavigationSplitViewVisibility {
@@ -26,14 +21,8 @@ enum ScreenshotScene: String {
 @MainActor
 enum ScreenshotSeeder {
     static func prepare(library: LibraryStore) -> BookSession? {
-        if ScreenshotScene.wantsLandscape,
-           let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { error in
-                print("Folio screenshots: landscape request failed: \(error)")
-            }
-        }
         guard let scene = ScreenshotScene.current, scene != .library, let book = library.books.first else { return nil }
-        library.saveProgress(bookID: book.id, pageIndex: scene == .calibration ? book.pageCount - 1 : min(4, book.pageCount - 1))
+        library.saveProgress(bookID: book.id, pageIndex: min(4, book.pageCount - 1))
         guard let current = library.book(withID: book.id),
               let session = BookSession(book: current, library: library) else { return nil }
         seed(session)
@@ -42,24 +31,14 @@ enum ScreenshotSeeder {
         switch scene {
         case .split: session.layout = .split
         case .board: session.layout = .board
-        case .library, .reader, .pins, .calibration: session.layout = .book
+        case .library, .reader, .pins: session.layout = .book
         }
         session.toast = nil
-        if scene == .calibration {
-            // Show PencilKit's width defaults in the screenshot.
-            let inks: [(String, PKInkingTool.InkType)] = [("pen", .pen), ("monoline", .monoline), ("fountain", .fountainPen),
-                                                          ("pencil", .pencil), ("marker", .marker)]
-            let summary = inks.map { name, ink in
-                String(format: "%@ %.2f [%.2f–%.2f]", name, ink.defaultWidth, ink.validWidthRange.lowerBound, ink.validWidthRange.upperBound)
-            }.joined(separator: "\n")
-            session.toast = Toast(message: summary, symbol: "ruler")
-        }
         return session
     }
 
     /// Adds the sample annotations once; later launches reuse them.
     private static func seed(_ session: BookSession) {
-        seedCalibration(session)
         guard session.annotations.pins.isEmpty else { return }
         let last = session.pageCount - 1
 
@@ -103,40 +82,6 @@ enum ScreenshotSeeder {
         session.setPinColor(third.id, .orange)
 
         session.saveNow()
-    }
-
-    /// Rows of short strokes in several colors and widths on the last page,
-    /// to check how programmatic ink renders.
-    private static func seedCalibration(_ session: BookSession) {
-        let page = session.pageCount - 1
-        guard session.drawing(forPage: page).strokes.isEmpty else { return }
-        let colors: [UIColor] = [InkColor.black.uiColor, InkColor.navy.uiColor, InkColor.red.uiColor, .black, .systemBlue]
-        let widths: [CGFloat] = [1.0, 1.8, 3.0, 5.0]
-        var strokes: [PKStroke] = []
-        for (row, color) in colors.enumerated() {
-            for (column, width) in widths.enumerated() {
-                let origin = CGPoint(x: 80 + CGFloat(column) * 115, y: 200 + CGFloat(row) * 70)
-                var points: [PKStrokePoint] = []
-                for step in 0...40 {
-                    let progress = CGFloat(step) / 40
-                    let location = CGPoint(x: origin.x + progress * 90, y: origin.y - sin(progress * .pi * 4) * 12)
-                    points.append(PKStrokePoint(location: location, timeOffset: TimeInterval(step) * 0.01,
-                                                size: CGSize(width: width, height: width),
-                                                opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2))
-                }
-                strokes.append(PKStroke(ink: PKInk(.pen, color: color), path: PKStrokePath(controlPoints: points, creationDate: Date())))
-            }
-        }
-        // The same black line drawn with the monoline ink for comparison.
-        var monoline: [PKStrokePoint] = []
-        for step in 0...40 {
-            let progress = CGFloat(step) / 40
-            monoline.append(PKStrokePoint(location: CGPoint(x: 80 + progress * 400, y: 600 - sin(progress * .pi * 6) * 14),
-                                          timeOffset: TimeInterval(step) * 0.01, size: CGSize(width: 3, height: 3),
-                                          opacity: 1, force: 1, azimuth: 0, altitude: .pi / 2))
-        }
-        strokes.append(PKStroke(ink: PKInk(.monoline, color: InkColor.navy.uiColor), path: PKStrokePath(controlPoints: monoline, creationDate: Date())))
-        session.setDrawing(PKDrawing(strokes: strokes), forPage: page)
     }
 
     private static func addInk(_ strokes: [PKStroke], toPage page: Int, in session: BookSession) {
